@@ -1,0 +1,134 @@
+---
+title: "Data Analysis 01 Template"
+author: Kelly Livingston, Allison Mollenkamp, Carmen Molina Acosta, Chris Barylick
+date: "3/2/2021"
+output:
+  html_document:
+    theme: cerulean
+    highlight: pygments
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction 
+
+In this notebook, we are reverse engineering the story, Out of control
+17 years. 179 victims. The deadly toll of street racing in Los Angeles (https://www.latimes.com/projects/la-me-street-racing/).
+
+## Install 
+
+```{r}
+
+install.packages ("sf")
+
+```
+
+## Load libraries
+
+Loading required libraries for this analysis.
+
+```{r}
+# Load the tidyverse
+library(tidyverse)
+
+library(sf)
+
+```
+
+## Load and Cleaning Data
+
+[In this block of text, describe the source of the data, and write a basic data dictionary for data you are working with]
+
+```{r}
+# Load required data
+# Path to data should be loaded from folder "data" i.e. read_csv("data/name_of_data.csv")
+
+street_racing_deaths <- read.csv("data/output/fatalities.csv")
+
+hoods <- st_read("data/input/hoods.shp") %>% as_tibble() %>%
+  select(-geometry)
+
+# Clean required data and prepare for analysis if needed. 
+
+
+```
+
+## Sentences to Engineer
+In this notebook, we are reverse engineering five sentences from the story.
+
+### Sentence 1
+
+* **Sentence text**: [Valentina D’Alessandro] was one of at least 179 people who have died in Los Angeles County since 2000 in accidents where street racing was suspected, according to a Los Angeles Times analysis of coroner’s records, police reports and media accounts from 2000 to 2017.
+
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+total_deaths <- street_racing_deaths %>%
+  summarise(total_deaths = n())
+
+# Display results of code below this codeblock
+
+total_deaths
+
+```
+
+### Sentence 2
+
+* **Sentence text**: The deadliest year on record was 2007, with 18 fatal crashes. After a period with relatively few recorded deaths, the count grew in recent years, with 15 fatalities in 2015, 11 in 2016 and 12 deaths in 2017, the Times analysis shows.
+
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+deaths_by_year 
+
+# Display results of code below this codeblock
+
+```
+
+### Sentence 3
+
+* **Sentence text**: [Paste in sentence to engineer here]
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+# Display results of code below this codeblock
+
+```
+
+### Sentence 4
+
+* **Sentence text**: [Paste in sentence to engineer here]
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+# Display results of code below this codeblock
+
+```
+
+### Sentence 5
+
+* **Sentence text**: [Paste in sentence to engineer here]
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+# Display results of code below this codeblock
+
+```
+
+-30-
