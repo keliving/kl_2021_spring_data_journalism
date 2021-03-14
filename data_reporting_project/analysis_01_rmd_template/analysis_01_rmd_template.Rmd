@@ -1,7 +1,7 @@
 ---
-title: "Data Analysis 01 Template"
+title: "Data Reporting Project"
 author: Kelly Livingston, Allison Mollenkamp, Carmen Molina Acosta, Chris Barylick
-date: "3/2/2021"
+date: "3/14/2021"
 output:
   html_document:
     theme: cerulean
@@ -39,6 +39,8 @@ library(tidyverse)
 
 library(sf)
 
+library(lubridate)
+
 ```
 
 ## Load and Cleaning Data
@@ -49,7 +51,13 @@ library(sf)
 # Load required data
 # Path to data should be loaded from folder "data" i.e. read_csv("data/name_of_data.csv")
 
-street_racing_deaths <- read.csv("data/output/fatalities.csv")
+street_racing_deaths <- read_csv("data/output/fatalities.csv")
+
+street_racing_other <- read_csv("data/input/street-racing-fatalities.csv") %>%
+  mutate(DeathDateTime = as_datetime(DeathDateTime)) %>%
+  mutate(death_year = year(DeathDateTime))
+
+glimpse(street_racing_other)
 
 hoods <- st_read("data/input/hoods.shp") %>% as_tibble() %>%
   select(-geometry)
@@ -66,12 +74,12 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 * **Sentence text**: [Valentina D’Alessandro] was one of at least 179 people who have died in Los Angeles County since 2000 in accidents where street racing was suspected, according to a Los Angeles Times analysis of coroner’s records, police reports and media accounts from 2000 to 2017.
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: We used the data from the street-racing-fatalities.csv file to give us a dataset with all of the deaths from the aggregated records, with the death year attached. After creating that file, titled, "street_racing_other," we were able to summarise the total deaths to recreate the Los Angeles Times' finding that at least 179 people had died in street racing accidents. 
 
 ```{r}
 # Put code to reverse engineer sentence here
 
-total_deaths <- street_racing_deaths %>%
+total_deaths <- street_racing_other %>%
   summarise(total_deaths = n())
 
 # Display results of code below this codeblock
@@ -84,14 +92,26 @@ total_deaths
 
 * **Sentence text**: The deadliest year on record was 2007, with 18 fatal crashes. After a period with relatively few recorded deaths, the count grew in recent years, with 15 fatalities in 2015, 11 in 2016 and 12 deaths in 2017, the Times analysis shows.
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: After creating the, "street_racing_other," file that included all of the deaths, regardless of whether they had been geo-located, along with the death year, we were able to group the deaths by year and summarise them. Arranging those grouped deaths in descending order confirmed the LA Times' finding that the deadliest year was 2007, with 18 deaths on record from street racing. 
+
+```{r}
+
+street_racing_difference <- street_racing_other %>%
+  anti_join(street_racing_deaths, by = c("CaseNum" = "case_number"))
+
+```
 
 ```{r}
 # Put code to reverse engineer sentence here
 
-deaths_by_year 
+deaths_by_year <- street_racing_other %>%
+  group_by(death_year) %>% 
+  summarise(deaths_by_year = n()) %>%
+  arrange(desc(deaths_by_year))
 
 # Display results of code below this codeblock
+
+deaths_by_year
 
 ```
 
