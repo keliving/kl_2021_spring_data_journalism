@@ -84,7 +84,7 @@ Q: How many deaths are there in the county with FIPS code 24003 -- Anne Arundel?
 
 ```{r}
 county_covid_deaths_dirty %>%
-  filter(FIPS code !, == 24003)
+  filter(`FIPS code !,` == 24003)
 ```
 
 Q: How many counties are in Maryland?
