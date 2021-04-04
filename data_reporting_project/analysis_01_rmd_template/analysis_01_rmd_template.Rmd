@@ -1,7 +1,7 @@
 ---
 title: "Data Reporting Project"
 author: Kelly Livingston, Allison Mollenkamp, Carmen Molina Acosta, Chris Barylick
-date: "3/14/2021"
+date: "4/4/2021"
 output:
   html_document:
     theme: cerulean
@@ -117,37 +117,80 @@ deaths_by_year
 
 ### Sentence 3
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: The Times’ analysis found that at least 60 people died in crashes related to street racing in the city of Los Angeles between 2000 and 2017. Only two other cities in the county — Long Beach and Commerce — saw more than 10 deaths during that period.
+* **Analysis summary**: We created a new file called "deaths_by_city" that took the data from "street_racing_deaths" and grouped it by city name. In doing this, we discovered the Times' reporters appear to have manually designated one extra death as happening in Los Angeles, so we attributed that case number to L.A. When we summarised and arranged the resulting death counts in descending order, it showed L.A. with 60 deaths and Long Beach and Commerce with 11 each. 
+
 
 ```{r}
 # Put code to reverse engineer sentence here
 
+deaths_by_city <- street_racing_deaths %>% 
+  mutate(city_name=case_when(
+   case_number == "2007-09388" ~ "los-angeles", 
+    is.na(city) ~ name,
+    TRUE ~ city
+    )) %>%
+  group_by(city_name) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+
+
 # Display results of code below this codeblock
+
+deaths_by_city
 
 ```
 
 ### Sentence 4
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: The dead were overwhelmingly male and young: More than half were 21 or younger, including two children, ages 4 and 8, killed along with their mother. Slightly less than half of the victims— 47% — were behind the wheel. The rest were either passengers in the speeding vehicles, spectators or people simply walking on a sidewalk or driving home.
+* **Analysis summary**: To confirm this finding, we had to arrange our data by demographics and the roles of those who'd died in the crashes. We created one file which used a "case_when" statement to categorize the victims as old or young based on whether they were younger or older than 21. We then grouped by gender and age to confirm the victims were mostly male and young. Then, we created another file to count and find the percentages of the roles each victim played, finding that 47% of the dead were suspected racers. 
 
 ```{r}
 # Put code to reverse engineer sentence here
 
+deaths_demo <- street_racing_other %>%
+  mutate(old_young = case_when (
+    Age <= 21 ~ "young", 
+    TRUE ~ "old"
+  )) %>%
+  group_by(Gender,old_young) %>%
+  summarise(count=n())
+
+deaths_role <- street_racing_other %>%
+  group_by(VictimRole) %>%
+  summarise(role_count=n()) %>%
+  mutate(role_percent=(role_count/sum(role_count))*100)
+  
 # Display results of code below this codeblock
+
+deaths_demo
+
+deaths_role
 
 ```
 
 ### Sentence 5
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: Deaths have occurred all across L.A. County, with the biggest concentration in the small city of Commerce. Eleven have died on the small, industrial city’s streets since 2000.
+* **Analysis summary**: We confirmed this finding by first counting the number of deaths that occurred in each city. We then created an additional file to calculate the number of deaths relative to the population of a city to find Commerce had the highest concentation of deaths, relative to its population. 
 
 ```{r}
 # Put code to reverse engineer sentence here
 
+deaths_by_hood <- street_racing_deaths %>%
+  group_by(name) %>%
+  summarise(death_count=n())
+
+deaths_per_capita <- deaths_by_hood %>%
+  left_join(hoods) %>%
+  filter(population>1000) %>%
+  mutate(per_capita = (death_count/population)*100) %>%
+  arrange(desc(per_capita))
+
 # Display results of code below this codeblock
+
+deaths_per_capita
 
 ```
 
