@@ -1,0 +1,179 @@
+---
+title: "data_reporting_project_2"
+author: "Kelly Livingston, Allison Mollenkamp, Chris Barylick, Carmen Molina Acosta"
+date: "4/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+```{r}
+# Tidyverse
+library(tidyverse)
+library(tidycensus)
+library(censusxy)
+library(janitor)
+library(sf)
+library(lubridate)
+
+
+# Store census API key
+census_api_key("ad2495eefa8c9cee250564234558b1a480532796")
+install = TRUE
+
+```
+
+## Get Data
+
+```{r}
+
+## Connecticut
+
+ct_2016_retailers <- read_csv("data/ct_2016_retailers.csv")
+ct_2017_retailers <- read_csv("data/ct_2017_retailers.csv")
+ct_2018_retailers <- read_csv("data/ct_2018_retailers.csv")
+ct_2019_retailers <- read_csv("data/ct_2019_retailers.csv")
+ct_2020_retailers <- read_csv("data/ct_2020_retailers.csv")
+
+ct_2016 <-read_csv("data/ct_2016.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2016_retailers)
+  
+ct_2017 <-read_csv("data/ct_2017.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2017_retailers)
+
+ct_2018 <-read_csv("data/ct_2018.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2018_retailers)
+
+ct_2019 <-read_csv("data/ct_2019.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2019_retailers)
+
+ct_2020<-read_csv("data/ct_2020.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2020_retailers)
+
+ct_sales<-ct_2016%>%
+  bind_rows(ct_2017)%>%
+  bind_rows(ct_2018)%>%
+  bind_rows(ct_2019)%>%
+  bind_rows(ct_2020)
+
+## Missouri 
+
+mo_club_keno <- read_csv("data/mo_club_keno.csv") %>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(keno_sales=sum(Sales))
+
+mo_ez_match <- read_csv("data/mo_ez_match.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(ez_match_sales=sum(Sales))
+
+mo_lotto <- read_csv("data/mo_lotto.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(lotto_sales=sum(Sales))
+
+mo_lucky_for_life <- read_csv("data/mo_lucky_for_life.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(lucky_for_life_sales=sum(Sales))
+
+mo_mega_millions <- read_csv("data/mo_mega_millions.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(mega_millions_sales=sum(Sales))
+
+mo_pick_3 <- read_csv("data/mo_pick_3.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(pick_3_sales=sum(Sales))
+
+mo_pick_4 <- read_csv("data/mo_pick_4.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(pick_4_sales=sum(Sales))
+
+mo_powerball <- read_csv("data/mo_powerball.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(powerball_sales=sum(Sales))
+
+mo_scratchers <- read_csv("data/mo_scratchers.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(scratchers_sales=sum(Sales))
+
+mo_show_me_cash <- read_csv("data/mo_show_me_cash.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(show_me_cash_sales=sum(Sales))
+
+mo_triple_play <- read_csv("data/mo_triple_play.csv")%>%
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+  group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
+  summarise(triple_play_sales=sum(Sales))
+
+mo_sales <-mo_club_keno %>%
+  full_join(mo_ez_match) %>%
+  full_join(mo_lotto) %>%
+  full_join(mo_lucky_for_life) %>%
+  full_join(mo_mega_millions) %>%
+  full_join(mo_pick_3)%>%
+  full_join(mo_pick_4)%>%
+  full_join(mo_powerball)%>%
+  full_join(mo_scratchers)%>%
+  full_join(mo_show_me_cash)%>%
+  full_join(mo_triple_play)%>%
+  mutate_at(vars(keno_sales,ez_match_sales,lotto_sales,lucky_for_life_sales,mega_millions_sales,pick_3_sales,pick_4_sales,powerball_sales,scratchers_sales,show_me_cash_sales,triple_play_sales), ~replace(., is.na(.), 0)) %>%
+  mutate(total_sales=(keno_sales + ez_match_sales +lotto_sales + lucky_for_life_sales + mega_millions_sales + pick_3_sales + pick_4_sales + powerball_sales + scratchers_sales + show_me_cash_sales + triple_play_sales))
+
+
+
+## Texas 
+
+tx_2016_sales <- read_csv("data/tx_2016_sales.csv")%>%
+  mutate(sales_2016 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
+  select(Retailer,Name,Address,City,Zip,sales_2016)
+
+tx_2017_sales <- read_csv("data/tx_2017_sales.csv")%>%
+  mutate(sales_2017 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
+  select(Retailer,Name,Address,City,Zip,sales_2017)
+
+tx_2018_sales <- read_csv("data/tx_2018_sales.csv")%>%
+  mutate(sales_2018 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
+  select(Retailer,Name,Address,City,Zip,sales_2018)
+
+tx_2019_sales <- read_csv("data/tx_2019_sales.csv")%>%
+  mutate(sales_2019= (AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
+  select(Retailer,Name,Address,City,Zip,sales_2019)
+
+tx_2020_sales <- read_csv("data/tx_2020_sales.csv")%>%
+  mutate(sales_2020 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
+  select(Retailer,Name,Address,City,Zip,sales_2020)
+
+
+```
