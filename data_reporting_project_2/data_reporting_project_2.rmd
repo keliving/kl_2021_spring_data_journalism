@@ -347,7 +347,14 @@ zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_00
          geoid=str_sub(geoid, start=3L,end=7L)) %>%
   select(fips_code_state,geoid,-ends_with("pop"), starts_with("pct"),median_income)
 
- 
+# Get list of states (exclude non-states and D.C.) 
+
+states <- fips_codes %>% 
+  select(state) %>%
+  distinct() %>%
+  head(51) %>%
+  as_vector()
+
 # Get census tract data for all states
 
 census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), state=states,year = 2018) %>%
@@ -371,8 +378,6 @@ census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","
   clean_names() %>%
   select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
 
-## Ask team about error with the chunk of code run above ^
-
 # Geocoding
 
 ct_sales_geocoded <- cxy_geocode(ct_sales , street = 'retailer_address', city = 'city', state = 'state',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
@@ -392,13 +397,20 @@ tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', s
 
 ### Sentence 1
 
-* **Sentence text**: Are lottery ticket retail outlets concentrated (total number of retailers or retailers per person) in low-income areas or non-white areas? (easier)
+* **Sentence text**: Are lottery ticket retail outlets concentrated (total number of retailers or retailers per person) in low-income areas or non-white areas?
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
 # Put code to reverse engineer sentence here
 
-
+ct_retail_demo <- ct_sales_geocoded %>%
+  filter(geoid!="NANANA") %>%
+  left_join(census_tract_stats)%>%
+  mutate(nonwhite=case_when(
+    pct_nonwhite>50 ~ "YES",
+    is.na(pct_nonwhite) ~ "NA",
+      TRUE ~ "NO"))%>%
+  group_by(nonwhite)
 
 
 ```
