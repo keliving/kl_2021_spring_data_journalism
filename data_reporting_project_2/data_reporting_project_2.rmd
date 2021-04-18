@@ -78,7 +78,27 @@ ct_sales<-ct_2016%>%
   bind_rows(ct_2017)%>%
   bind_rows(ct_2018)%>%
   bind_rows(ct_2019)%>%
-  bind_rows(ct_2020)
+  bind_rows(ct_2020)%>%
+  mutate(total_sales=(play3_sales+play4_sales+lotto_sales+cash5_sales+powerball_sales+midday3_sales+midday4_sales+lucky_sales+instant_sales+mega_sales+superdraw_sales+fivecc_sales+llinksd_sales+llinksn_sales+keno_sales))%>%
+  select(store_id,year,retailer_name,retailer_address,city,unknown,total_sales)%>%
+  mutate(sales_2016=case_when(
+    year == 2016 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2017=case_when(
+    year==2017 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2018=case_when(
+    year==2018 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2019=case_when(
+    year==2019 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2020=case_when(
+    year==2020 ~ total_sales,
+    TRUE ~ 0)) %>%
+  group_by(store_id,retailer_name,retailer_address,city)%>%
+  summarise(sales_16=sum(sales_2016), sales_17=sum(sales_2017),sales_18=sum(sales_2018),sales_19=sum(sales_2019),sales_20=sum(sales_2020))%>%
+  mutate(state="CT")
 
 ## Missouri 
 
@@ -87,55 +107,77 @@ mo_club_keno <- read_csv("data/mo_club_keno.csv") %>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(keno_sales=sum(Sales))
 
+# mo_club_keno_winnings <- read_csv("data/mo_club_keno_winnings.csv")
+
 mo_ez_match <- read_csv("data/mo_ez_match.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(ez_match_sales=sum(Sales))
+
+# mo_ez_match_winnings <- read_csv("data/mo_ez_match_winnings.csv")
 
 mo_lotto <- read_csv("data/mo_lotto.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(lotto_sales=sum(Sales))
 
+# mo_lotto_winnings <- read_csv("data/mo_lotto_winnings.csv)
+
 mo_lucky_for_life <- read_csv("data/mo_lucky_for_life.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(lucky_for_life_sales=sum(Sales))
+
+# mo_lucky_for_life_winnings <- read_csv("data/mo_lucky_for_life_winnings.csv)
 
 mo_mega_millions <- read_csv("data/mo_mega_millions.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(mega_millions_sales=sum(Sales))
 
+# mo_mega_millions_winnings <- read_csv("data/mo_mega_millions_winnings.csv)
+
 mo_pick_3 <- read_csv("data/mo_pick_3.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(pick_3_sales=sum(Sales))
+
+# mo_pick_3_winnings <- read_csv("data/mo_pick_3_winnings.csv)
 
 mo_pick_4 <- read_csv("data/mo_pick_4.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(pick_4_sales=sum(Sales))
 
+# mo_pick_4_winnings <- read_csv("data/mo_pick_4_winnings.csv)
+
 mo_powerball <- read_csv("data/mo_powerball.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(powerball_sales=sum(Sales))
+
+# mo_powerball_winnings <- read_csv("data/mo_powerball_winnings.csv)
 
 mo_scratchers <- read_csv("data/mo_scratchers.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(scratchers_sales=sum(Sales))
 
+# mo_scratchers_winnings <- read_csv("mo_scratchers_winnings.csv)
+
 mo_show_me_cash <- read_csv("data/mo_show_me_cash.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(show_me_cash_sales=sum(Sales))
 
+# mo_show_me_cash_winnings <- read_csv("data/mo_show_me_cash_winnings.csv)
+
 mo_triple_play <- read_csv("data/mo_triple_play.csv")%>%
   mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
   group_by(Retailer, Year, Address, CITY, ZIP, County)%>%
   summarise(triple_play_sales=sum(Sales))
+
+# mo_triple_play_winnings <- read_csv("data/mo_triple_play_winnings.csv)
 
 mo_sales <-mo_club_keno %>%
   full_join(mo_ez_match) %>%
@@ -148,32 +190,241 @@ mo_sales <-mo_club_keno %>%
   full_join(mo_scratchers)%>%
   full_join(mo_show_me_cash)%>%
   full_join(mo_triple_play)%>%
-  mutate_at(vars(keno_sales,ez_match_sales,lotto_sales,lucky_for_life_sales,mega_millions_sales,pick_3_sales,pick_4_sales,powerball_sales,scratchers_sales,show_me_cash_sales,triple_play_sales), ~replace(., is.na(.), 0)) %>%
-  mutate(total_sales=(keno_sales + ez_match_sales +lotto_sales + lucky_for_life_sales + mega_millions_sales + pick_3_sales + pick_4_sales + powerball_sales + scratchers_sales + show_me_cash_sales + triple_play_sales))
-
+mutate_at(vars(keno_sales,ez_match_sales,lotto_sales,lucky_for_life_sales,mega_millions_sales,pick_3_sales,pick_4_sales,powerball_sales,scratchers_sales,show_me_cash_sales,triple_play_sales), ~replace(., is.na(.), 0)) %>%
+  mutate(total_sales=(keno_sales + ez_match_sales +lotto_sales + lucky_for_life_sales + mega_millions_sales + pick_3_sales + pick_4_sales + powerball_sales + scratchers_sales + show_me_cash_sales + triple_play_sales))%>%
+  select(Retailer, Year, Address, CITY, ZIP, County,total_sales)%>%
+  clean_names()%>%
+  mutate(sales_2016=case_when(
+    year == 2016 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2017=case_when(
+    year==2017 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2018=case_when(
+    year==2018 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2019=case_when(
+    year==2019 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2020=case_when(
+    year==2020 ~ total_sales,
+    TRUE ~ 0)) %>%
+  mutate(sales_2021=case_when(
+    year==2021 ~ total_sales,
+    TRUE ~ 0 ))%>%
+  group_by(retailer,address,city,county,zip)%>%
+  summarise(sales_16=sum(sales_2016), sales_17=sum(sales_2017),sales_18=sum(sales_2018),sales_19=sum(sales_2019),sales_20=sum(sales_2020),sales_21=sum(sales_2021)) %>%
+  mutate(state="MO")
 
 
 ## Texas 
 
-tx_2016_sales <- read_csv("data/tx_2016_sales.csv")%>%
-  mutate(sales_2016 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
-  select(Retailer,Name,Address,City,Zip,sales_2016)
+tx_2016_sales <- read_csv("data/tx_2016_sales.csv") %>%
+  clean_names()%>%
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+  mutate(tx_triple_chance=gsub("[\\$,]", "",tx_triple_chance))%>%
+  mutate(tx_triple_chance=as.numeric(tx_triple_chance))%>%  mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+  mutate(sales_2016= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+  select(retailer,name,address,city,zip,sales_2016)
+
+tx_2016_winnings <- read_csv("data/tx_2016_winnings.csv")
 
 tx_2017_sales <- read_csv("data/tx_2017_sales.csv")%>%
-  mutate(sales_2017 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
-  select(Retailer,Name,Address,City,Zip,sales_2017)
+  clean_names()%>%
+  mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+  mutate(sales_2017= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+  select(retailer,name,address,city,zip,sales_2017)
+
+tx_2017_winnings <- read_csv("data/tx_2017_winnings.csv")
 
 tx_2018_sales <- read_csv("data/tx_2018_sales.csv")%>%
-  mutate(sales_2018 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
-  select(Retailer,Name,Address,City,Zip,sales_2018)
+  clean_names()%>%
+  mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+  mutate(sales_2018= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+  select(retailer,name,address,city,zip,sales_2018)
+
+tx_2018_winnings <- read_csv("data/tx_2018_winnings.csv")
 
 tx_2019_sales <- read_csv("data/tx_2019_sales.csv")%>%
-  mutate(sales_2019= (AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
-  select(Retailer,Name,Address,City,Zip,sales_2019)
+  select(!`TX Triple Chance`)%>%
+  clean_names()%>%
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+   mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step), ~replace(., is.na(.), 0))%>%
+  mutate(sales_2019= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step))%>%
+  select(retailer,name,address,city,zip,sales_2019)
 
-tx_2020_sales <- read_csv("data/tx_2020_sales.csv")%>%
-  mutate(sales_2020 =(AllorNothing+`Cash Five`+`Daily 4`+ `Instant Rollup`+`Lotto Texas`+`Mega Millions`+`Pick 3`+Powerball+`Texas Two Step`+ `TX Triple Chance`))%>%
-  select(Retailer,Name,Address,City,Zip,sales_2020)
+tx_2019_winnings <- read_csv("data/tx_2019_winnings.csv")
 
+tx_2020_sales <- read_csv("data/tx_2020_sales.csv") %>%
+  clean_names()%>%
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+ mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step), ~replace(., is.na(.), 0))%>%
+  mutate(sales_2020= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step))%>%
+  select(retailer,name,address,city,zip,sales_2020)
+
+tx_2020_winnings <- read_csv("data/tx_2020_winnings.csv")
+
+tx_sales <- tx_2016_sales %>%
+  full_join(tx_2017_sales)%>%
+  full_join(tx_2018_sales)%>%
+  full_join(tx_2019_sales)%>%
+  full_join(tx_2020_sales)%>%
+  mutate(state="TX")
+
+
+# Get ZCTA data for all states  
+
+zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), year = 2018) %>%
+  select(GEOID, variable, estimate) %>%
+  pivot_wider(names_from=variable, values_from=estimate) %>%
+  rename(
+    total_pop = B01001_001,
+    white_pop = B02001_002,
+    black_pop = B02001_003,
+    native_pop = B02001_004,
+    hispanic_pop = B03001_003,
+    poverty_pop = B06012_002,
+    median_income = B19013_001) %>%
+  mutate(pct_white = round(white_pop/total_pop,2)*100,
+         pct_nonwhite = 100-round(white_pop/total_pop,2)*100,
+         pct_black = round(black_pop/total_pop,2)*100,
+         pct_native = round(native_pop/total_pop,2)*100,
+         pct_hispanic = round(hispanic_pop/total_pop,2)*100,
+         pct_poverty = round(poverty_pop/total_pop,2)*100) %>%
+  clean_names() %>%
+  mutate(fips_code_state = str_sub(geoid,start=1L,end=2L),
+         geoid=str_sub(geoid, start=3L,end=7L)) %>%
+  select(fips_code_state,geoid,-ends_with("pop"), starts_with("pct"),median_income)
+
+ 
+# Get census tract data for all states
+
+census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), state=states,year = 2018) %>%
+  select(GEOID, variable, estimate) %>%
+  pivot_wider(names_from=variable, values_from=estimate) %>%
+  rename(
+    total_pop = B01001_001,
+    white_pop = B02001_002,
+    black_pop = B02001_003,
+    native_pop = B02001_004,
+    hispanic_pop = B03001_003,
+    poverty_pop = B06012_002,
+    median_income = B19013_001) %>%
+  mutate(pct_white = round(white_pop/total_pop,2)*100,
+         pct_nonwhite = 100-round(white_pop/total_pop,2)*100,
+         pct_black = round(black_pop/total_pop,2)*100,
+         pct_native = round(native_pop/total_pop,2)*100,
+         pct_hispanic = round(hispanic_pop/total_pop,2)*100,
+         pct_poverty = round(poverty_pop/total_pop,2)*100
+         ) %>%
+  clean_names() %>%
+  select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
+
+## Ask team about error with the chunk of code run above ^
+
+# Geocoding
+
+ct_sales_geocoded <- cxy_geocode(ct_sales , street = 'retailer_address', city = 'city', state = 'state',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+  mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+  select(geoid, everything())
+
+mo_sales_geocoded<-cxy_geocode(mo_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+  mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+  select(geoid, everything())
+
+tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+  mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+  select(geoid, everything())
+
+
+```
+
+### Sentence 1
+
+* **Sentence text**: Are lottery ticket retail outlets concentrated (total number of retailers or retailers per person) in low-income areas or non-white areas? (easier)
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+
+
+
+```
+
+
+### Sentence 2
+
+* **Sentence text**: [Paste in sentence to engineer here]
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+
+# Display results of code below this codeblock
+
+```
+
+### Sentence 3
+
+* **Sentence text**: [Paste in sentence to engineer here]
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+
+# Put code to reverse engineer sentence here
+
+# Display results of code below this codeblock
 
 ```
