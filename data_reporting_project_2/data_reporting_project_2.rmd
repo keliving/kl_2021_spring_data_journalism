@@ -412,14 +412,28 @@ ct_retail_demo <- ct_sales_geocoded %>%
       TRUE ~ "NO"))%>%
   group_by(nonwhite)
 
+# consult with Sean about why this ^ is turning up all NAs 
+
+tx_demos <-tx_sales_geocoded %>%
+  left_join(census_tract_stats)%>%
+  mutate(nonwhite=case_when(
+    pct_nonwhite>50 ~ "YES",
+    is.na(pct_nonwhite) ~ "NA",
+      TRUE ~ "NO"
+  ))%>%
+  mutate_at(vars(sales_2016,sales_2017,sales_2018,sales_2019,sales_2020), ~replace(., is.na(.), 0))%>%
+  group_by(nonwhite) %>%
+ summarise(all_2016=sum(sales_2016),all_2017=sum(sales_2017),all_2018=sum(sales_2018),all_2019=sum(sales_2019),all_2010=sum(sales_2020),count=n())%>%
+  mutate(sales_per_16=(all_2016/count),sales_per_17=(all_2017/count),sales_per_18=(all_2018/count),sales_per_19=(all_2019/count),sales_per_20=(all_2019/count))
+
 
 ```
 
 
 ### Sentence 2
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: Have any of the sales trends we've identified changed over the last few years, especially when comparing trends before and during the pandemic? 
+* **Analysis summary**: We intend to identify this with a sum and comparison function among the individual state years and their sales. 
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -430,7 +444,7 @@ ct_retail_demo <- ct_sales_geocoded %>%
 
 ### Sentence 3
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: Are lottery ticket sales higher at retail locations where customers who visit the store come from low-income or non-white areas? 
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
