@@ -378,6 +378,8 @@ census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","
   clean_names() %>%
   select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
 
+tx_sales_geocoded <- read_rds("data/tx_sales_geocoded.rds)
+
 # Geocoding
 
 ct_sales_geocoded <- cxy_geocode(ct_sales , street = 'retailer_address', city = 'city', state = 'state',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
@@ -392,6 +394,8 @@ tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', s
   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
   select(geoid, everything())
 
+write_rds(tx_sales_geocoded,"data/tx_sales_geocoded.rds")
+
 
 ```
 
@@ -404,15 +408,18 @@ tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', s
 # Put code to reverse engineer sentence here
 
 ct_retail_demo <- ct_sales_geocoded %>%
+  mutate(cxy_state_id=str_pad(cxy_state_id,2,side="left",pad="0"))%>%
+  mutate(cxy_county_id=str_pad(cxy_county_id,3,side="left",pad="0"))%>%
+   mutate(cxy_tract_id=str_pad(cxy_tract_id,6,side="left",pad="0"))%>%
+   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id))%>%
   filter(geoid!="NANANA") %>%
   left_join(census_tract_stats)%>%
   mutate(nonwhite=case_when(
     pct_nonwhite>50 ~ "YES",
     is.na(pct_nonwhite) ~ "NA",
       TRUE ~ "NO"))%>%
-  group_by(nonwhite)
-
-# consult with Sean about why this ^ is turning up all NAs 
+  group_by(nonwhite) %>%
+  arrange(median_income)
 
 tx_demos <-tx_sales_geocoded %>%
   left_join(census_tract_stats)%>%
@@ -437,6 +444,28 @@ tx_demos <-tx_sales_geocoded %>%
 
 ```{r}
 # Put code to reverse engineer sentence here
+
+ct_sales_trends_2016 <- ct_2016 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
+  summarize_if(is.numeric, sum, na.rm=TRUE) 
+  
+ct_sales_trends_2017 <- ct_2017 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
+  summarize_if(is.numeric, sum, na.rm=TRUE)
+
+ct_sales_trends_2018 <- ct_2018 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
+  summarize_if(is.numeric, sum, na.rm=TRUE)
+
+ct_sales_trends_2019 <- ct_2019 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
+  summarize_if(is.numeric, sum, na.rm=TRUE)
+
+ct_sales_trends_2020 <- ct_2020 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
+  summarize_if(is.numeric, sum, na.rm=TRUE) 
+
+ct_sales_trends <- ct_sales_trends_2016 %>%
+  full_join(ct_sales_trends_2017) %>%
+  full_join(ct_sales_trends_2018) %>%
+  full_join(ct_sales_trends_2019) %>%
+  full_join(ct_sales_trends_2020)
+  
 
 # Display results of code below this codeblock
 
