@@ -421,6 +421,20 @@ ct_retail_demo <- ct_sales_geocoded %>%
   group_by(nonwhite) %>%
   arrange(median_income)
 
+mo_retail_demo <- mo_sales_geocoded %>%
+  mutate(cxy_state_id=str_pad(cxy_state_id,2,side="left",pad="0"))%>%
+  mutate(cxy_county_id=str_pad(cxy_county_id,3,side="left",pad="0"))%>%
+   mutate(cxy_tract_id=str_pad(cxy_tract_id,6,side="left",pad="0"))%>%
+   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id))%>%
+  filter(geoid!="NANANA") %>%
+  left_join(census_tract_stats)%>%
+  mutate(nonwhite=case_when(
+    pct_nonwhite>50 ~ "YES",
+    is.na(pct_nonwhite) ~ "NA",
+      TRUE ~ "NO"))%>%
+  group_by(nonwhite) %>%
+  arrange(median_income)
+
 tx_demos <-tx_sales_geocoded %>%
   left_join(census_tract_stats)%>%
   mutate(nonwhite=case_when(
@@ -466,6 +480,31 @@ ct_sales_trends <- ct_sales_trends_2016 %>%
   full_join(ct_sales_trends_2019) %>%
   full_join(ct_sales_trends_2020)
   
+
+tx_demos <-tx_sales_geocoded %>%
+  left_join(census_tract_stats)%>%
+  mutate(nonwhite=case_when(
+    pct_nonwhite>50 ~ "YES",
+    is.na(pct_nonwhite) ~ "NA",
+      TRUE ~ "NO"
+  ))%>%
+  mutate(per_cap_16=(sales_2016/total_pop),per_cap_17=(sales_2017/total_pop),per_cap_18=(sales_2018/total_pop),per_cap_19=(sales_2019/total_pop),per_cap_20=(sales_2020/total_pop))%>%
+ mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(nonwhite) %>%
+ summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))
+
+mo_demos<-mo_sales_geocoded %>%
+  left_join(census_tract_stats)%>%
+  mutate(nonwhite=case_when(
+    pct_nonwhite>50 ~ "YES",
+    is.na(pct_nonwhite) ~ "NA",
+      TRUE ~ "NO"
+  ))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop),per_cap_21=(sales_21/total_pop))%>%
+ mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20,per_cap_21), ~replace(., is.na(.), 0))%>%
+  group_by(nonwhite) %>%  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),all_cap_21=sum(per_cap_21),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count),per_capita_21=(all_cap_21/count))
 
 # Display results of code below this codeblock
 
