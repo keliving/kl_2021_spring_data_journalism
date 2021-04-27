@@ -378,7 +378,7 @@ census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","
   clean_names() %>%
   select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
 
-tx_sales_geocoded <- read_rds("data/tx_sales_geocoded.rds)
+tx_sales_geocoded <- read_rds("data/tx_sales_geocoded.rds")
 
 # Geocoding
 
@@ -386,9 +386,13 @@ ct_sales_geocoded <- cxy_geocode(ct_sales , street = 'retailer_address', city = 
   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
   select(geoid, everything())
 
+write_rds(ct_sales_geocoded,"data/ct_sales_geocoded.rds")
+
 mo_sales_geocoded<-cxy_geocode(mo_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
   select(geoid, everything())
+
+write_rds(mo_sales_geocoded,"data/mo_sales_geocoded.rds")
 
 tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
@@ -396,6 +400,55 @@ tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', s
 
 write_rds(tx_sales_geocoded,"data/tx_sales_geocoded.rds")
 
+unique_retailers<-read_rds("data/all_unique_retailers_geocodio_plus_census.rds")
+
+safegraph_match<-read_rds("data/safegraph_match.rds")
+
+
+```
+
+```{r}
+
+tx_sales_geocode_fixed<-tx_sales%>%
+  rename(retailer_id=retailer)%>%
+  rename(retailer_state=state)%>%
+  mutate(retailer_id=as.character(retailer_id))%>%
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state")
+tx_sales_geocode_fixed<-tx_sales%>%
+  rename(retailer_id=retailer)%>%
+  rename(retailer_state=state)%>%
+  mutate(retailer_id=as.character(retailer_id))%>%
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))
+%>%
+  filter(!is.na(tract))%>%
+  rename(geoid=tract)
+
+mo_sales_geocode_fixed<-mo_sales%>%
+  rename(retailer_name=retailer)%>%
+  rename(retailer_state=state)%>%
+  left_join(unique_retailers, by=c("retailer_name", "retailer_state"))%>%
+  filter(!is.na(tract))%>%
+  rename(geoid=tract)
+
+ct_sales_geocode_fixed<-ct_sales%>%
+  rename(retailer_id=store_id)%>%
+  rename(retailer_state=state)%>%
+  mutate(retailer_id=as.character(retailer_id))%>%
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))%>%
+  filter(!is.na(tract))%>%
+  rename(geoid=tract)
+
+tx_money<- tx_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_2016/total_pop),per_cap_17=(sales_2017/total_pop),per_cap_18=(sales_2018/total_pop),per_cap_19=(sales_2019/total_pop),per_cap_20=(sales_2020/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))
+
+
+#add in somewhere
 
 ```
 
@@ -408,18 +461,12 @@ write_rds(tx_sales_geocoded,"data/tx_sales_geocoded.rds")
 # Put code to reverse engineer sentence here
 
 ct_retail_demo <- ct_sales_geocoded %>%
-  mutate(cxy_state_id=str_pad(cxy_state_id,2,side="left",pad="0"))%>%
-  mutate(cxy_county_id=str_pad(cxy_county_id,3,side="left",pad="0"))%>%
-   mutate(cxy_tract_id=str_pad(cxy_tract_id,6,side="left",pad="0"))%>%
-   mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id))%>%
-  filter(geoid!="NANANA") %>%
   left_join(census_tract_stats)%>%
-  mutate(nonwhite=case_when(
-    pct_nonwhite>50 ~ "YES",
-    is.na(pct_nonwhite) ~ "NA",
-      TRUE ~ "NO"))%>%
+  mutate(non_white_bucket=ntile(pct_nonwhite,5))%>%
   group_by(nonwhite) %>%
   arrange(median_income)
+
+#Think about race and median income as separate questions for now
 
 mo_retail_demo <- mo_sales_geocoded %>%
   mutate(cxy_state_id=str_pad(cxy_state_id,2,side="left",pad="0"))%>%
