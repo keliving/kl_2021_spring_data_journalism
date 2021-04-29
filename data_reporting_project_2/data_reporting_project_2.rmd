@@ -376,7 +376,7 @@ census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","
          pct_poverty = round(poverty_pop/total_pop,2)*100
          ) %>%
   clean_names() %>%
-  select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
+  select(geoid, total_pop, starts_with("pct"),median_income)
 
 ct_sales_geocoded <- read_rds("data/ct_sales_geocoded.rds")
 
@@ -458,11 +458,26 @@ tx_money<- tx_sales_geocode_fixed%>%
 ```{r}
 # Put code to reverse engineer sentence here
 
-ct_retail_demo <- ct_sales_geocoded %>%
+ct_retail_demo <- ct_sales_geocode_fixed%>%
   left_join(census_tract_stats)%>%
+  ungroup()%>%
   mutate(non_white_bucket=ntile(pct_nonwhite,5))%>%
-  group_by(nonwhite) %>%
-  arrange(median_income)
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  filter(!is.na(non_white_bucket))%>%
+  group_by(non_white_bucket)%>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))
+
+ct_money<- ct_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  ungroup()%>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))
 
 #Think about race and median income as separate questions for now
 
