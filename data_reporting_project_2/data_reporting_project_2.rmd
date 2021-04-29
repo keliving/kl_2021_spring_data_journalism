@@ -378,6 +378,10 @@ census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","
   clean_names() %>%
   select(geoid,-ends_with("pop"), starts_with("pct"),median_income)
 
+ct_sales_geocoded <- read_rds("data/ct_sales_geocoded.rds")
+
+mo_sales_geocoded <- read_rds("data/mo_sales_geocoded.rds")
+
 tx_sales_geocoded <- read_rds("data/tx_sales_geocoded.rds")
 
 # Geocoding
@@ -413,13 +417,7 @@ tx_sales_geocode_fixed<-tx_sales%>%
   rename(retailer_id=retailer)%>%
   rename(retailer_state=state)%>%
   mutate(retailer_id=as.character(retailer_id))%>%
-  left_join(unique_retailers, by=c("retailer_id", "retailer_state")
-tx_sales_geocode_fixed<-tx_sales%>%
-  rename(retailer_id=retailer)%>%
-  rename(retailer_state=state)%>%
-  mutate(retailer_id=as.character(retailer_id))%>%
-  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))
-%>%
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))%>%
   filter(!is.na(tract))%>%
   rename(geoid=tract)
 
