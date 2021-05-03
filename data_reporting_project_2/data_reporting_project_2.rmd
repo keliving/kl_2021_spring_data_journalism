@@ -453,7 +453,17 @@ tx_money<- tx_sales_geocode_fixed%>%
 ### Sentence 1
 
 * **Sentence text**: Are lottery ticket retail outlets concentrated (total number of retailers or retailers per person) in low-income areas or non-white areas?
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: For Texas, as noted by the tx_demos data set, we noticed that bucket 1, the most white areas, showed the highest concentration of purchases, with an average per capita spending of $80.90 for per_capita_20. 
+
+For Connecticut, as noted by the ct_retail_demo data set, we noticed that bucket 3, the areas with non-white populations falling in the middle 20%, showed the highest concentration of purchases, with an average per capita spending of $80.43 for per_capita_20. 
+
+For Missouri, as noted by the mo_demos data set, we noticed that bucket 5, areas with the highest non-white population, showed the ihghest concentration of purchases, with an average per capita spending of $83.26 for per_capita_20. 
+
+For Texas, as noted by the tx_money data set, we noticed that bucket 3, which features the median income level, showed the highest concentration of purchases, with an average per capita spending of $63.41 for per_capita_20. 
+
+For Connecticut, as noted by the ct_money data set, we noticed that bucket 1, which features the lower income level, showed the highest concentration of purchases, with an average per capita spending of $74.99 for per_capita_20. 
+
+For Missouri, as noted by the mo_money data set, we noticed that bucket 1, which features the lowest income level, showed the highest concentration of purchases, with an average per capita spending of $60.78 for per_capita_20 and $6.90 for per_capita_21. 
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -495,6 +505,18 @@ mo_retail_demo <- mo_sales_geocoded %>%
   group_by(nonwhite) %>%
   arrange(median_income)
 
+mo_money<- mo_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  ungroup() %>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop),per_cap_21=(sales_21/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20,per_cap_21), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),all_cap_21=sum(per_cap_21),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count),per_capita_21=(all_cap_21/count))%>%
+  select(income_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(income_bucket))
+
 tx_demos <-tx_sales_geocoded %>%
   left_join(census_tract_stats)%>%
   mutate(nonwhite=case_when(
@@ -507,39 +529,6 @@ tx_demos <-tx_sales_geocoded %>%
  summarise(all_2016=sum(sales_2016),all_2017=sum(sales_2017),all_2018=sum(sales_2018),all_2019=sum(sales_2019),all_2010=sum(sales_2020),count=n())%>%
   mutate(sales_per_16=(all_2016/count),sales_per_17=(all_2017/count),sales_per_18=(all_2018/count),sales_per_19=(all_2019/count),sales_per_20=(all_2019/count))
 
-
-```
-
-
-### Sentence 2
-
-* **Sentence text**: Have any of the sales trends we've identified changed over the last few years, especially when comparing trends before and during the pandemic? 
-* **Analysis summary**: We intend to identify this with a sum and comparison function among the individual state years and their sales. 
-
-```{r}
-# Put code to reverse engineer sentence here
-
-ct_sales_trends_2016 <- ct_2016 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
-  summarize_if(is.numeric, sum, na.rm=TRUE) 
-  
-ct_sales_trends_2017 <- ct_2017 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
-  summarize_if(is.numeric, sum, na.rm=TRUE)
-
-ct_sales_trends_2018 <- ct_2018 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
-  summarize_if(is.numeric, sum, na.rm=TRUE)
-
-ct_sales_trends_2019 <- ct_2019 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
-  summarize_if(is.numeric, sum, na.rm=TRUE)
-
-ct_sales_trends_2020 <- ct_2020 [,c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)] %>%
-  summarize_if(is.numeric, sum, na.rm=TRUE) 
-
-ct_sales_trends <- ct_sales_trends_2016 %>%
-  full_join(ct_sales_trends_2017) %>%
-  full_join(ct_sales_trends_2018) %>%
-  full_join(ct_sales_trends_2019) %>%
-  full_join(ct_sales_trends_2020)
-  
 
 tx_demos <-tx_sales_geocoded %>%
   left_join(census_tract_stats)%>%
@@ -565,6 +554,79 @@ mo_demos<-mo_sales_geocoded %>%
  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20,per_cap_21), ~replace(., is.na(.), 0))%>%
   group_by(nonwhite) %>%  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),all_cap_21=sum(per_cap_21),count=n())%>%
   mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count),per_capita_21=(all_cap_21/count))
+
+
+```
+
+
+### Sentence 2
+
+* **Sentence text**: Have any of the sales trends we've identified changed over the last few years, especially when comparing trends before and during the pandemic? 
+* **Analysis summary**: For Texas, when referencing the tx_money_over_time data set, we noticed that the lowest and second-lowest income tiers (buckets 1 and 2) showed the most significant bumps in lottery purchases between 2019 and 2020 (16.83% and 16.91%, respectively). 
+
+For Connecticut, when referencing the ct_money_over_time data set, we noticed that the second lowest income level and the lowest level income tiers (buckets 2 and 1) showed the most significant bumps in lottery purchases between 2019 and 2020 (7.102% and 5.422%, respectively). 
+
+For Missouri, when referencing the mo_money_over_time data set, we noticed that the lowest income level and the second lowest income level income tiers (buckets 1 and 2) showed the most significant bumps in lottery purchases between 2019 and 2020 (18.15% and 15.12%, respectively). 
+ 
+```{r}
+# Put code to reverse engineer sentence here
+
+tx_demos_over_time <- tx_demos%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+  
+tx_money_over_time <- tx_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+mo_demos_over_time <- mo_demos%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+mo_money_over_time <- mo_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+ct_demos_over_time <- ct_retail_demo%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+ct_money_over_time <- ct_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+ # select(!count)%>%
+  #mutate
+  #mutate(non_white_bucket=as.character(non_white_bucket))%>%
+  #pivot_longer(!non_white_bucket,names_to = "sales_year",values_to = "sales")%>%
+  #mutate(bucket_1=case_when(
+   # non_white_bucket=="1" ~ sales,
+    #TRUE ~ 0
+  #))%>%
+#mutate(bucket_2=case_when(
+ #   non_white_bucket=="2" ~ sales,
+  #  TRUE ~ 0
+  #))%>%
+  #mutate(bucket_3=case_when(
+   # non_white_bucket=="3" ~ sales,
+    #TRUE ~ 0
+  #))%>%
+  #mutate(bucket_4=case_when(
+   # non_white_bucket=="4" ~ sales,
+    #TRUE ~ 0
+  #))%>%
+  #mutate(bucket_5=case_when(
+   # non_white_bucket=="5" ~ sales,
+    #TRUE ~ 0
+  #))%>% 
+  #group_by(sales_year)
 
 # Display results of code below this codeblock
 
