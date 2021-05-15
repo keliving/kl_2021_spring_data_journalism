@@ -1,0 +1,682 @@
+---
+title: "Data Analysis Memo Group 5"
+author: "Chris Barylick, Kelly Livingston,Carmen Molina Acosta, Allison Mollenkamp"
+date: "5/13/2021"
+output:
+  html_document:
+    theme: cerulean
+    highlight: pygments
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction 
+This notebook accompanies our pitch memo for a story on inequity in lottery spending.  It describes the approach we took to arrive at the key findings explained in detail in the memo. The findings are:
+
+* In Missouri the least white and lowest income areas spend the most per capita on the lottery. In Connecticut, there is a trend of less white and lower income areas to spend more, but it's not strictly linear. (reframe around richest, whitest spend less)
+* These trends largely do not hold in Texas, where the whitest areas and the middle income areas generally spend the most per capita on the lottery.
+* Spending across demographic groups in all three states increased in 2020, with the most pronounced increases usually coming in less white and lower income areas.
+
+## Load libraries
+Loading required libraries for this analysis.
+
+```{r echo=FALSE, message=FALSE}
+# Load libraries 
+library (tidyverse)
+library (janitor)
+library (tidycensus)
+library (censusxy)
+library (lubridate)
+#turn off scientific notation
+options(scipen = 999)
+```
+
+## Load and Cleaning Data
+For Missouri, we used sales data by game. Each row represented an individual store's sales of that game in one month. This data runs from 2016 to 2021. Each store row also contains address data.
+
+In Connecticut, we used sales data by month by store, in files for each year from 2016 to 2020. We also received files with a list of the retailers in each year, which contain addresses for those retailers.
+
+For Texas, we used sales data by game. Each row represented an individual store's sales of that game in one month. This data runs from 2016 to 2020. Each store row also contains address data.
+
+All data was acquired through FOIA requests to state lottery organizations.
+
+```{r}
+# Load and clean required data
+#Texas
+#load 2016 tx sales data
+tx_2016_sales <- read_csv("data/tx_2016_sales.csv") %>%
+#clean names
+  clean_names()%>%
+#remove commas, dollar signs, change from character to numeric
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+  mutate(tx_triple_chance=gsub("[\\$,]", "",tx_triple_chance))%>%
+  mutate(tx_triple_chance=as.numeric(tx_triple_chance))%>%
+#change NAs to 0
+   mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+#create total sales column that includes all games
+  mutate(sales_2016= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+#remove unnecessary columns
+  select(retailer,name,address,city,zip,sales_2016)
+# load tx 2017 sales data
+tx_2017_sales <- read_csv("data/tx_2017_sales.csv") %>%
+#clean names
+  clean_names()%>%
+#Replace NA with 0
+  mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+#create total sales column including all games
+  mutate(sales_2017= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+#remove unnecessary columns
+  select(retailer,name,address,city,zip,sales_2017)
+#load TX 2018 sales data
+tx_2018_sales <- read_csv("data/tx_2018_sales.csv")%>%
+#clean names
+  clean_names()%>%
+#Change NAs to 0
+  mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step,tx_triple_chance), ~replace(., is.na(.), 0))%>%
+#create total sales column including all games
+  mutate(sales_2018= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step+tx_triple_chance))%>%
+#remove unnecessary columns
+  select(retailer,name,address,city,zip,sales_2018)
+#load TX 2019 sales data
+tx_2019_sales <- read_csv("data/tx_2019_sales.csv")%>%
+#remove game that didn't exist that year
+  select(!`TX Triple Chance`)%>%
+#clean names
+  clean_names()%>%
+#remove commas, dollar signs, convert to numeric
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+#Change NAs to 0
+   mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step), ~replace(., is.na(.), 0))%>%
+#Create total sales column including all games
+  mutate(sales_2019= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step))%>%
+#remove unnecessary columns
+  select(retailer,name,address,city,zip,sales_2019)
+#load TX 2020 sales data
+tx_2020_sales <- read_csv("data/tx_2020_sales.csv")%>%
+#clean names
+  clean_names()%>%
+#remove commas, dollar signs, convert to numeric
+  mutate(allor_nothing =gsub("[\\$,]", "", allor_nothing)) %>%
+  mutate(allor_nothing= as.numeric(allor_nothing))%>%
+  mutate(cash_five =gsub("[\\$,]", "",cash_five))%>%
+  mutate(cash_five=as.numeric(cash_five))%>%
+  mutate(daily_4=gsub("[\\$,]", "",daily_4))%>%
+  mutate(daily_4=as.numeric(daily_4))%>%
+  mutate(instant_rollup=gsub("[\\$,())]", "",instant_rollup))%>%
+  mutate(instant_rollup= as.numeric(instant_rollup))%>%
+  mutate(lotto_texas=gsub("[\\$,]", "",lotto_texas))%>%
+  mutate(lotto_texas=as.numeric(lotto_texas))%>%
+  mutate(mega_millions=gsub("[\\$,]", "",mega_millions))%>%
+  mutate(mega_millions=as.numeric(mega_millions))%>%
+  mutate(pick_3=gsub("[\\$,]", "",pick_3))%>%
+  mutate(pick_3=as.numeric(pick_3))%>%
+  mutate(powerball=gsub("[\\$,]", "",powerball))%>%
+  mutate(powerball=as.numeric(powerball))%>%
+  mutate(texas_two_step=gsub("[\\$,]", "",texas_two_step))%>%
+  mutate(texas_two_step=as.numeric(texas_two_step))%>%
+#Change NAs to 0
+   mutate_at(vars(allor_nothing,cash_five,daily_4,instant_rollup,lotto_texas,mega_millions,pick_3,powerball,texas_two_step), ~replace(., is.na(.), 0))%>%
+#create total sales column including all games
+  mutate(sales_2020= (allor_nothing+cash_five+daily_4+instant_rollup+lotto_texas+mega_millions+pick_3+powerball+texas_two_step))%>%
+#remove unnecessary columns
+  select(retailer,name,address,city,zip,sales_2020)
+#create one object that has all years of sales data
+tx_sales <- tx_2016_sales %>%
+  full_join(tx_2017_sales)%>%
+  full_join(tx_2018_sales)%>%
+  full_join(tx_2019_sales)%>%
+  full_join(tx_2020_sales)%>%
+#add state field for geocoding purposes
+  mutate(state="TX")
+#Missouri
+#Read in Club Keno sales
+mo_club_keno <- read_csv("data/mo_club_keno.csv") %>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Combine monthly records into yearly records for each store
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find total club keno sales by year and store
+  summarise(keno_sales=sum(Sales))
+#read in EZ Match sales
+mo_ez_match <- read_csv("data/mo_ez_match.csv") %>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find EZ match sales by store, year
+  summarise(ez_match_sales=sum(Sales))
+#Read in Mo Lotto sales
+mo_lotto <- read_csv("data/mo_lotto.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find mo lotto sales by store, year
+  summarise(lotto_sales=sum(Sales))
+#Read in Lucky for Life sales
+mo_lucky_for_life <- read_csv("data/mo_lucky_for_life.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Lucky for Life sales by store, year
+  summarise(lucky_for_life_sales=sum(Sales))
+#Read in Mega Millions sales
+mo_mega_millions <- read_csv("data/mo_mega_millions.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Mega Millions sales by store, year
+  summarise(mega_millions_sales=sum(Sales))
+#Read in Pick 3 sales
+mo_pick_3<- read_csv("data/mo_pick_3.csv")%>%
+#Changes NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Pick 3 sales by store, year
+  summarise(pick_3_sales=sum(Sales))
+#Read in Pick 4 sales
+mo_pick_4<- read_csv("data/mo_pick_4.csv") %>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Pick 4 sales by store, year
+  summarise(pick_4_sales=sum(Sales))
+#Read in powerball sales
+mo_powerball <- read_csv("data/mo_powerball.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Powerball sales by store, year
+  summarise(powerball_sales=sum(Sales))
+#Read in scratchers sales
+mo_scrathers<- read_csv("data/mo_scratchers.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Scratchers sales by store, year
+  summarise(scratchers_sales=sum(Sales))
+#Read in Show me Cash sales
+mo_show_me_cash<-read_csv("data/mo_show_me_cash.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Show me Cash sales by store, year
+  summarise(show_me_cash_sales=sum(Sales))
+#Read in Triple Play sales
+mo_triple_play <-read_csv("data/mo_triple_play.csv")%>%
+#Change NAs to 0
+  mutate_at(vars(Sales), ~replace(., is.na(.), 0))%>%
+#Go from monthly to yearly
+  group_by(Retailer, Year, Address, CITY, ZIP, County) %>%
+#Find Triple Play sales by store, year
+  summarise(triple_play_sales=sum(Sales))
+#Create one object with sales for all games (by store and year)
+mo_sales <-mo_club_keno %>%
+  full_join(mo_ez_match) %>%
+  full_join(mo_lotto) %>%
+  full_join(mo_lucky_for_life) %>%
+  full_join(mo_mega_millions) %>%
+  full_join(mo_pick_3)%>%
+  full_join(mo_pick_4)%>%
+  full_join(mo_powerball)%>%
+  full_join(mo_scrathers)%>%
+  full_join(mo_show_me_cash)%>%
+  full_join(mo_triple_play)%>%
+  #Change NAs to 0
+  mutate_at(vars(keno_sales,ez_match_sales,lotto_sales,lucky_for_life_sales,mega_millions_sales,pick_3_sales,pick_4_sales,powerball_sales,scratchers_sales,show_me_cash_sales,triple_play_sales), ~replace(., is.na(.), 0)) %>%
+#Create total sales variable for each store/year row
+  mutate(total_sales=(keno_sales + ez_match_sales +lotto_sales + lucky_for_life_sales + mega_millions_sales + pick_3_sales + pick_4_sales + powerball_sales + scratchers_sales + show_me_cash_sales + triple_play_sales))%>%
+#Get rid of unnecessary columns
+  select(Retailer, Year, Address, CITY, ZIP, County,total_sales)%>%
+#Clean names
+  clean_names()%>%
+#Give each row a sales number for each year. Because each row is currently associated with a year, most of these columns will be zero until the next step
+  mutate(sales_2016=case_when(
+    year == 2016 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2017=case_when(
+    year==2017 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2018=case_when(
+    year==2018 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2019=case_when(
+    year==2019 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2020=case_when(
+    year==2020 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2021=case_when(
+    year==2021 ~ total_sales,
+    TRUE ~ 0
+  ))%>%
+#Group by retailer, and then on the next line add up the yearly sales. There's probably a cleaner way to do this, but it let's us take a row that's for Store X - 2016, and a row that's for Store X - 2017, and get a row that's Store X , with one column for 2016 and one for 2017 and so on.
+  group_by(retailer,address,city,county,zip)%>%
+  summarise(sales_16=sum(sales_2016), sales_17=sum(sales_2017),sales_18=sum(sales_2018),sales_19=sum(sales_2019),sales_20=sum(sales_2020),sales_21=sum(sales_2021)) %>%
+#Add a state column for geocoding
+  mutate(state="MO")
+#Connecticut
+#Read in retailers, which include addresses
+ct_2016_retailers <- read_csv("data/ct_2016_retailers.csv")
+ct_2017_retailers <- read_csv("data/ct_2017_retailers.csv") 
+ct_2018_retailers <- read_csv("data/ct_2018_retailers.csv") 
+ct_2019_retailers <- read_csv("data/ct_2019_retailers.csv") 
+ct_2020_retailers <- read_csv("data/ct_2020_retailers.csv")  
+#Read in CT 2016 sales, clean up formatting, go from monthly to yearly, then join to retailers to get the addresses
+ct_2016 <-read_csv("data/ct_2016.csv")%>% 
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%   
+  mutate(year=year(sales_date))%>%  
+  group_by(store_id,year)%>%   
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%   
+  left_join(ct_2016_retailers)    
+#Read in CT 2017 sales, clean up formatting, go from monthly to yearly, then join to retailers to get the addresses
+ct_2017 <-read_csv("data/ct_2017.csv")%>%   
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%   
+  mutate(year=year(sales_date))%>%   
+  group_by(store_id,year)%>%   
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%   
+  left_join(ct_2017_retailers)  
+#Read in CT 2018 sales, clean up formatting, go from monthly to yearly, then join to retailers to get the addresses
+ct_2018 <-read_csv("data/ct_2018.csv")%>%   
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%   
+  mutate(year=year(sales_date))%>%   
+  group_by(store_id,year)%>%   
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2018_retailers)
+#Read in CT 2019 sales, clean up formatting, go from monthly to yearly, then join to retailers to get the addresses
+ct_2019 <-read_csv("data/ct_2019.csv")%>%   
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%   
+  mutate(year=year(sales_date))%>%   
+  group_by(store_id,year)%>%   
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%   
+  left_join(ct_2019_retailers) 
+#Read in CT 2020 sales, clean up formatting, go from monthly to yearly, then join to retailers to get the addresses
+ct_2020<-read_csv("data/ct_2020.csv")%>%
+  mutate(sales_date=as_date(sales_date,format="%m/%d/%Y"))%>%
+  mutate(year=year(sales_date))%>%
+  group_by(store_id,year)%>%
+  summarise(across(play3_sales:keno_sales,~sum(.x)))%>%
+  left_join(ct_2020_retailers)
+#Combine all sales years into one object
+ct_sales<-ct_2016%>%
+  bind_rows(ct_2017)%>%
+  bind_rows(ct_2018)%>%
+  bind_rows(ct_2019)%>%
+  bind_rows(ct_2020)%>%
+  #create total sales for each store/year row
+  mutate(total_sales=(play3_sales+play4_sales+lotto_sales+cash5_sales+powerball_sales+midday3_sales+midday4_sales+lucky_sales+instant_sales+mega_sales+superdraw_sales+fivecc_sales+llinksd_sales+llinksn_sales+keno_sales))%>%
+  #get rid of unnecesssary columns
+  select(store_id,year,retailer_name,retailer_address,city,unknown,total_sales)%>%
+#Similar to Missouri, using case when to create column that will either have that year's sales or a zero
+  mutate(sales_2016=case_when(
+    year == 2016 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2017=case_when(
+    year==2017 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2018=case_when(
+    year==2018 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2019=case_when(
+    year==2019 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+  mutate(sales_2020=case_when(
+    year==2020 ~ total_sales,
+    TRUE ~ 0
+  )) %>%
+#Going down to one row per store, instead of store and year
+  group_by(store_id,retailer_name,retailer_address,city)%>%
+#Adding up what we did in the case when, getting a column for each year's sales at that store
+  summarise(sales_16=sum(sales_2016), sales_17=sum(sales_2017),sales_18=sum(sales_2018),sales_19=sum(sales_2019),sales_20=sum(sales_2020))%>%
+#adding a state column for geocoding
+  mutate(state="CT")
+# Store census API key
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+## Get list of states (Exclude non-states, except DC)
+states <- fips_codes %>%
+  select(state) %>%
+  distinct() %>%
+  head(51) %>%
+  as_vector() 
+  
+# Get census tract data for all states
+census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), state=states,year = 2018) %>%
+  select(GEOID, variable, estimate) %>%
+  pivot_wider(names_from=variable, values_from=estimate) %>%
+  rename(
+    total_pop = B01001_001,
+    white_pop = B02001_002,
+    black_pop = B02001_003,
+    native_pop = B02001_004,
+    hispanic_pop = B03001_003,
+    poverty_pop = B06012_002,
+    median_income = B19013_001
+  ) %>%
+  mutate(pct_white = round(white_pop/total_pop,2)*100,
+         pct_nonwhite = 100-round(white_pop/total_pop,2)*100,
+         pct_black = round(black_pop/total_pop,2)*100,
+         pct_native = round(native_pop/total_pop,2)*100,
+         pct_hispanic = round(hispanic_pop/total_pop,2)*100,
+         pct_poverty = round(poverty_pop/total_pop,2)*100
+         ) %>%
+  clean_names() %>%
+  select(geoid,-ends_with("pop"), starts_with("pct"),median_income,total_pop)
+#Geocoding, not currently used for other code because it has a LOT of NAs
+#Geocode TX sales data
+#tx_sales_geocoded <- cxy_geocode(tx_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+ # mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+  #select(geoid, everything())
+#Store as TX sales geocoded as RDS
+#write_rds(tx_sales_geocoded,"data/tx_sales_geocoded.rds")
+#Geocode CT sales data
+#ct_sales_geocoded <- cxy_geocode(ct_sales , street = 'retailer_address', city = 'city', state = 'state',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+ # mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+  #select(geoid, everything())
+#Store CT Sales Geocoded as RDS
+#write_rds(ct_sales_geocoded,"data/ct_sales_geocoded.rds")
+#Geocode MO Sales data
+#mo_sales_geocoded <- cxy_geocode(mo_sales , street = 'address', city = 'city', state = 'state', zip = 'zip',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
+#  mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
+ # select(geoid, everything())
+#Store MO Sales Geocoded as RDS
+#write_rds(mo_sales_geocoded,"data/mo_sales_geocoded.rds")
+#read in geocoded files (stored as rds files in geocoding section, can prevent running slow geocoding over and over)
+tx_sales_geocoded<-read_rds("data/tx_sales_geocoded.rds")
+ct_sales_geocoded<-read_rds("data/ct_sales_geocoded.rds")
+mo_sales_geocoded<-read_rds("data/mo_sales_geocoded.rds")
+#read in better geocoded file
+unique_retailers<-read_rds("data/all_unique_retailers_geocodio_plus_census.rds")
+#Setting up better geocoding for each state
+tx_sales_geocode_fixed<-tx_sales%>%
+#Make names match "unique retailers" file
+  rename(retailer_id=retailer)%>%
+  rename(retailer_state=state)%>%
+  mutate(retailer_id=as.character(retailer_id))%>%
+#Join to unique retailers
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))%>%
+#Filter out stores we don't have census tracts for
+  filter(!is.na(tract))%>%
+#Rename tract as geoid, to fit code we already wrote
+  rename(geoid=tract)
+mo_sales_geocode_fixed<-mo_sales%>%
+#Make names match "unique retailers" file
+  rename(retailer_name=retailer)%>%
+  rename(retailer_state=state)%>%
+#join to unique retailers
+  left_join(unique_retailers, by=c("retailer_name", "retailer_state"))%>%
+#get rid of stores we don't have a tract for
+  filter(!is.na(tract))%>%
+#rename tract as geoid
+  rename(geoid=tract)
+ct_sales_geocode_fixed<-ct_sales%>%
+#make names match unique retailers
+  rename(retailer_id=store_id)%>%
+  rename(retailer_state=state)%>%
+  mutate(retailer_id=as.character(retailer_id))%>%
+#join to unique retailers
+  left_join(unique_retailers, by=c("retailer_id", "retailer_state"))%>%
+#Get rid of stores we don't have a tract for
+  filter(!is.na(tract))%>%
+#rename tract as geoid
+  rename(geoid=tract)
+```
+
+## Key Findings
+
+### Key Finding 1
+
+* **Finding text**: In Missouri, the least white and lowest income areas spend the most per capita on the lottery. In Connecticut, there is a trend of less white and lower income areas to spend more, but it's not strictly linear.
+* **Finding explanation**: Missouri is the clearest example of inequity in lottery spending. In Connecticut, middle income or pct nonwhite areas are sometimes the highest spenders, but the three lowest income or least white buckets spend more than the other two.
+
+```{r}
+# Put thoroughly commented code to reproduce the finding, and output a table with the results below the codeblock.  Only include code that is strictly necessary to reproduce the finding. Cut everything else!  
+ct_retail_demo<-ct_sales_geocode_fixed%>%
+#combine geocoded sales data with demographic statistics
+  left_join(census_tract_stats)%>%
+  ungroup() %>%
+#create five buckets based on the percentage of people who are non-white the tract. (1 is most white, 5 is least white)
+  mutate(non_white_bucket=ntile(pct_nonwhite,5))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(non_white_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))%>%
+  select(non_white_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(non_white_bucket))
+#CT except with median income
+ct_money<- ct_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  ungroup() %>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))%>%
+  select(income_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(income_bucket))
+#Same steps but for Missouri
+mo_demos<-mo_sales_geocode_fixed %>%
+  left_join(census_tract_stats)%>%
+  ungroup() %>%
+  mutate(non_white_bucket=ntile(pct_nonwhite,5))%>% 
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop),per_cap_21=(sales_21/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20,per_cap_21), ~replace(., is.na(.), 0))%>%
+  group_by(non_white_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),all_cap_21=sum(per_cap_21),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count),per_capita_21=(all_cap_21/count))%>%
+  select(non_white_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(non_white_bucket))
+#Same steps for Missouri but with median income
+mo_money<- mo_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  ungroup() %>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_16/total_pop),per_cap_17=(sales_17/total_pop),per_cap_18=(sales_18/total_pop),per_cap_19=(sales_19/total_pop),per_cap_20=(sales_20/total_pop),per_cap_21=(sales_21/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20,per_cap_21), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),all_cap_21=sum(per_cap_21),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count),per_capita_21=(all_cap_21/count))%>%
+  select(income_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(income_bucket))
+mo_money
+mo_demos
+ct_retail_demo
+ct_money
+```
+
+### Key Finding 2
+
+* **Finding text**: These trends largely do not hold in Texas, where the whitest areas and the middle income areas generally spend the most per capita on the lottery.
+* **Finding explanation**: Reporting could look at what role Texas' lottery reporting requirements may play in their (on the surface) more equal spending. Further analysis should also include looking at ethnicity in addition to race and income.
+
+```{r}
+# Put thoroughly commented code to reproduce the finding, and output a table with the results below the codeblock.  Only include code that is strictly necessary to reproduce the finding. Cut everything else!  
+tx_demos <-tx_sales_geocode_fixed %>%
+  #combine geocoded sales data with demographic statistics
+  left_join(census_tract_stats)%>%
+#create five buckets based on the percentage of people who are non-white the tract. (1 is most white, 5 is least white)
+  mutate(non_white_bucket=ntile(pct_nonwhite,5))%>%
+#For each store, divide sales by population
+  mutate(per_cap_16=(sales_2016/total_pop),per_cap_17=(sales_2017/total_pop),per_cap_18=(sales_2018/total_pop),per_cap_19=(sales_2019/total_pop),per_cap_20=(sales_2020/total_pop))%>%
+#Change NAs to 0
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+#Group by Non-white bucket
+  group_by(non_white_bucket) %>%
+#for each bucket, add up the per-capita sales for all the stores in that bucket
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+#Take the total of all the per-capita sales, and divide it by the number of stores in the bucket
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))%>%
+#Get rid of unnecessary columns
+  select(non_white_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+#Get rid of the stores that didn't go into a non-white bucket
+  filter(!is.na(non_white_bucket))
+#All the same steps, except with median income instead of percent non-white
+tx_money<- tx_sales_geocode_fixed%>%
+  left_join(census_tract_stats)%>%
+  mutate(income_bucket=ntile(median_income,5))%>%
+  mutate(per_cap_16=(sales_2016/total_pop),per_cap_17=(sales_2017/total_pop),per_cap_18=(sales_2018/total_pop),per_cap_19=(sales_2019/total_pop),per_cap_20=(sales_2020/total_pop))%>%
+  mutate_at(vars(per_cap_16,per_cap_17,per_cap_18,per_cap_19,per_cap_20), ~replace(., is.na(.), 0))%>%
+  group_by(income_bucket) %>%
+  summarise(all_cap_16=sum(per_cap_16),all_cap_17=sum(per_cap_17),all_cap_18=sum(per_cap_18),all_cap_19=sum(per_cap_19),all_cap_20=sum(per_cap_20),count=n())%>%
+  mutate(per_capita_16=(all_cap_16/count),per_capita_17=(all_cap_17/count),per_capita_18=(all_cap_18/count),per_capita_19=(all_cap_19/count),per_capita_20=(all_cap_20/count))%>%
+  select(income_bucket,count,per_capita_16,per_capita_17,per_capita_18,per_capita_19,per_capita_20)%>%
+  filter(!is.na(income_bucket))
+tx_money
+tx_demos
+```
+
+### Key Finding 3
+
+* **Finding text**:  Spending across demographic groups in all three states increased in 2020, with the most pronounced increases usually coming in less white and lower income areas.
+* **Finding explanation**: Reporting could look at what motivated greater spending in an economic downturn, especially for lower income groups.
+
+```{r}
+# Put thoroughly commented code to reproduce the finding, and output a table with the results below the codeblock.  Only include code that is strictly necessary to reproduce the finding. Cut everything else!  
+tx_demos_over_time <- tx_demos%>%
+  #Find percent change in per-capita sales for each bucket between 2016 and 2017
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  #Same but 17 and 18
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  #same but 18 and 19
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  #same but 19 and 20
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+  
+#Same but with median income buckets
+tx_money_over_time <- tx_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+#Same but Missouri
+mo_demos_over_time <- mo_demos%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+#Same but Missouri and median income
+mo_money_over_time <- mo_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+#Same but Connecticut
+ct_demos_over_time <- ct_retail_demo%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+#Same but CT and median income
+ct_money_over_time <- ct_money%>%
+  mutate(change_16_17=((per_capita_17-per_capita_16)/per_capita_16))%>%
+  mutate(change_17_18=((per_capita_18-per_capita_17)/per_capita_17))%>%
+  mutate(change_18_19=((per_capita_19-per_capita_18)/per_capita_18))%>%
+  mutate(change_19_20=((per_capita_20-per_capita_19)/per_capita_19))
+ct_demos_over_time
+ct_money_over_time
+mo_demos_over_time
+mo_money_over_time
+tx_demos_over_time
+tx_money_over_time
+```
+
+##JOUR772 Data Reporting Project 2 Memo to the Editor
+By Chris Barylick, Allison Mollenkamp, Kelly Livingston, and Carmen Molina Acosta
+
+Lottery ticket sales per capita increased during the pandemic, with notable disparities in spending across racial and economic demographics, in three states..
+
+An analysis of lottery sale data from 2016-2020 in Missouri, Connecticut and Texas discovered the following key findings:
+
+In Missouri and Connecticut, the richest and whitest income areas spend the least per capita on the lottery. 
+This trend, however, does not hold in Texas, where the whitest areas and the middle income areas generally spend the most per capita on the lottery. 
+Spending on the lottery increased in 2020 across all demographic groups in all three states, with the greatest increase in non-white and lower income areas. 
+
+Of the three states, Missouri shows the clearest example of inequity in lottery spending. In Connecticut, middle income or percent non-white areas are sometimes the highest spenders, but the three lowest income or least white buckets spend more than the other two. While we noted this pattern did not hold in Texas, it’s worth noting that our analysis in the state did not account for differences between Hispanic and non-Hispanic demographics. Also important to note are the different demographic make-ups of these states. Future reporting on these findings should account for population trends in each state as opposed to comparisons between them. 
+
+Though our identified trends — and other states — need to be investigated more, these findings suggest the basis for a potential project investigating inequities in state lottery systems across the country. While previous reporting has recognized disparities in spending across demographics nationally, a brief search indicates that a state-by-state comparison and analysis of data similar to ours has not been done. And besides a 2016 analysis by Vox of Connecticut lottery winner data and demographics, analyses of these three states individually do not seem to have been pursued either. 
+
+There were pros and cons to the data we used, as well as some limitations to consider. We were able to pull, sort, and clean a massive amount of data, tap into recent Census findings, and use GPS coordinates to determine which stores were located in which parts of town, which helped gauge the median income and racial composition of the surrounding area. A first attempt at geocoding yielded many "not available" results, leading us to use alternate code. Improved geocoding may still be possible.
+
+We can verify our findings by recreating them—  having others follow the same steps that we took in our analysis, namely by posting our work online via Github, allowing others to download it, run the data, and see how it behaves for themselves. They can follow our work by loading core files provided by the state lottery commissions, cleaning and filtering the data to create overall sales data per state and creating data templates that show income level lottery spending and demographic level lottery spending. By comparing this data with U.S. Census findings and localized GPS data, another data reporter could determine whether our analysis is replicable and accurate. We were also able to cut down on the processing time necessary to recreate our efforts by creating localized files that could be saved and referred to later by anyone else who wished to study and expand on our findings. 
+
+Our analysis prompts several questions that need to be investigated further. Do these same spending patterns exist in other states? Why do these inequities across racial and economic groups exist? And how has the pandemic impacted spending patterns and augmented these disparities? 
+
+We’ve identified the following potential avenues for future reporting and analyses: 
+
+On-the ground reporting in St. Louis, Missouri, talking to lottery customers and staff at stores from the least white areas with the highest per capita sales in 2020, the top three of which are: the United Mart BP, Crown Mart, and Riverview Motomart.
+Aiming to determine why these demographics spend more, and why spending increased despite an economic downturn and the COVID-19 pandemic.
+Additional on-the ground reporting should later be pursued in Connecticut and Texas as well, but we cite Missouri as a priority due to the more pronounced inequities already evident through the data.
+Analysis of Texas lottery sales by ethnicity, to determine if there’s is a discrepancy in sales between Hispanic and non-Hispanic white and non-white areas. 
+Analysis of Missouri lottery sale data from 2021, which the state already has on file, to see if and how these trends continue.
+Analysis of other state lottery systems’ sales, to determine if an increase in overall spending during the pandemic is a national pattern.
+Investigation into the role Texas' lottery reporting requirements may play in what appears to be more equal spending.
+Reaching out to Stop Predatory Gambling, a D.C.-based advocacy group
+National Director Les Bernal
+Phone: (202) 567-6996 
+Les@stoppredatorygambling.org
+Reaching out to local state lottery agencies:
+Missouri Lottery Commission
+Phone: (573)-751-4050, Angie.Klebba@molottery.com 
+Connecticut Lottery Board of Directors
+https://www.ctlottery.org/BoardMembers 
+Texas Lottery Operations Division
+Director Ryan Mindell: ryan.mindell@lottery.state.tx.us, 512-344-5358
+
+
